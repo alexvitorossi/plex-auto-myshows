@@ -1,7 +1,7 @@
 services:
   plex-auto-myshows:
     build: .
-    image: plex-auto-myshows:latest
+    image: alexvitorossi/plex-auto-myshows:latest
     container_name: plex-auto-myshows
     restart: unless-stopped
     env_file: .env
