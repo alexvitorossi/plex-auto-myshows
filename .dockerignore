@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.local
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+data/
+*.db
+*.sqlite*
+.idea/
+.vscode/
+.DS_Store
+Dockerfile
+docker-compose.yml
