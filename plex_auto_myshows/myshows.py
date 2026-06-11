@@ -1,6 +1,7 @@
 import itertools
 import json
 import logging
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -61,6 +62,7 @@ class MyShowsClient:
         # scheduler threads, so guard all token state behind one lock.
         # Reentrant because _rpc -> _ensure_token -> authenticate all take it.
         self._lock = threading.RLock()
+        self._request_lock = threading.Lock()
 
         self.s = requests.Session()
         self.s.headers["User-Agent"] = f"plex-auto-myshows/{__version__}"
@@ -110,11 +112,18 @@ class MyShowsClient:
         if not self.token_path:
             return
         self.token_path.parent.mkdir(parents=True, exist_ok=True)
-        self.token_path.write_text(json.dumps({
+        payload = json.dumps({
             "access_token": self._access_token,
             "refresh_token": self._refresh_token,
             "expires_at": self._expires_at,
-        }))
+        })
+        tmp_path = self.token_path.with_name(f".{self.token_path.name}.tmp")
+        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, self.token_path)
         self.token_path.chmod(0o600)
 
     def _apply_token_response(self, data: dict) -> None:
@@ -126,7 +135,8 @@ class MyShowsClient:
     def _post_token(self, data: dict) -> requests.Response:
         for attempt in range(5):
             try:
-                r = self.s.post(TOKEN_URL, data=data, timeout=15)
+                with self._request_lock:
+                    r = self.s.post(TOKEN_URL, data=data, timeout=15)
             except requests.RequestException as e:
                 log.warning("token endpoint request failed (attempt %d/5): %s", attempt + 1, e)
                 time.sleep(2 + attempt * 2)
@@ -174,7 +184,12 @@ class MyShowsClient:
 
     def _rpc(self, method: str, params: dict | None = None, retry_on_401: bool = True) -> dict:
         with self._lock:
-            self._ensure_token()
+            try:
+                self._ensure_token()
+            except MyShowsTransientError:
+                raise
+            except MyShowsError as e:
+                raise MyShowsTransientError(f"RPC {method} auth failed: {e}") from e
             token = self._access_token
         payload = {
             "jsonrpc": "2.0",
@@ -183,12 +198,13 @@ class MyShowsClient:
             "id": next(self._rpc_id),
         }
         try:
-            r = self.s.post(
-                RPC_URL,
-                json=payload,
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=20,
-            )
+            with self._request_lock:
+                r = self.s.post(
+                    RPC_URL,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=20,
+                )
         except requests.RequestException as e:
             raise MyShowsTransientError(f"RPC {method} request failed: {e}") from e
         if r.status_code == 401 and retry_on_401:

@@ -62,12 +62,11 @@ def main() -> int:
 
         if episode_id is None:
             log.warning(
-                "No MyShows match for %s S%02dE%02d, skipping",
+                "No MyShows match for %s S%02dE%02d; leaving unmarked for future retries",
                 episode.grandparentTitle,
                 episode.seasonNumber or 0,
                 episode.index or 0,
             )
-            cache.mark_watched(rating_key, None)
             return True
 
         try:
@@ -108,7 +107,7 @@ def main() -> int:
         on_server=playing_handler.set_server,
     )
 
-    start_healthcheck(listener.is_alive, listener.is_alive)
+    start_healthcheck(lambda: True, listener.is_alive)
 
     listener.run_forever()
     return 0

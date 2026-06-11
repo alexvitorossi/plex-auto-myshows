@@ -1,4 +1,4 @@
 plexapi==4.15.16
-requests==2.32.3
+requests==2.34.2
 websocket-client==1.8.0
 tzdata==2025.2
