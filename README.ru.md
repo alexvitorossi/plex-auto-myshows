@@ -7,7 +7,7 @@
 ## Как это работает
 
 1. Подключается к Plex с твоим токеном и подписывается на alert-уведомления.
-2. Когда серия досмотрена (`state=stopped` с прогрессом ≥90% или `viewCount > 0`), событие попадает в обработчик.
+2. Когда серия досмотрена (`state=stopped` с прогрессом ≥ `WATCHED_THRESHOLD_PERCENT`, по умолчанию 90%, или `viewCount > 0`), событие попадает в обработчик.
 3. По внешним id (tvdb/imdb) сериал из Plex маппится на сериал в MyShows через `shows.GetByExternalId`; маппинг кэшируется в SQLite.
 4. Эпизод отмечается в MyShows через `manage.CheckEpisode` (v2 JSON-RPC API).
 
@@ -35,6 +35,7 @@ Plex-токен — см. [официальную инструкцию](https://
 Опциональные переменные (с дефолтами):
 
 ```
+WATCHED_THRESHOLD_PERCENT=90
 CATCHUP_ON_START=true
 CATCHUP_INTERVAL_HOURS=24
 CATCHUP_LOOKBACK_HOURS=24

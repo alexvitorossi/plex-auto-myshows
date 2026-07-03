@@ -18,10 +18,12 @@ class PlayingHandler:
         on_watched: Callable[[Episode, str | None], bool],
         username_filter: str | None = None,
         server: PlexServer | None = None,
+        watched_threshold: float = WATCHED_THRESHOLD,
     ):
         self.server = server
         self.on_watched = on_watched
         self.username_filter = username_filter
+        self.watched_threshold = watched_threshold
         self._users: "OrderedDict[str, str]" = OrderedDict()
 
     def set_server(self, server: PlexServer) -> None:
@@ -97,7 +99,7 @@ class PlayingHandler:
         duration = getattr(item, "duration", 0) or 0
         progress = (view_offset / duration) if duration else 0.0
         view_count = getattr(item, "viewCount", 0) or 0
-        if not (view_count > 0 or progress >= WATCHED_THRESHOLD):
+        if not (view_count > 0 or progress >= self.watched_threshold):
             return
 
         log.info(

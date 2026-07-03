@@ -58,9 +58,6 @@ class MyShowsClient:
         self._expires_at: float = 0.0
         self._last_auth_failure: float = 0.0
         self._loaded = False
-        # The client is shared between the alert listener and the catch-up
-        # scheduler threads, so guard all token state behind one lock.
-        # Reentrant because _rpc -> _ensure_token -> authenticate all take it.
         self._lock = threading.RLock()
         self._request_lock = threading.Lock()
 
@@ -229,11 +226,12 @@ class MyShowsClient:
         self, *, tvdb: int | None = None, imdb: str | None = None
     ) -> int | None:
         attempts: list[tuple[str, str]] = []
+        if imdb:
+            imdb_id = imdb[2:] if imdb.startswith("tt") else imdb
+            if imdb_id.isdigit():
+                attempts.append(("imdb", imdb_id))
         if tvdb:
             attempts.append(("thetvdb", str(tvdb)))
-        if imdb:
-            imdb_id = imdb if imdb.startswith("tt") else f"tt{imdb}"
-            attempts.append(("imdb", imdb_id))
         for source, value in attempts:
             try:
                 result = self._rpc("shows.GetByExternalId", {"id": value, "source": source})

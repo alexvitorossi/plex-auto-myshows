@@ -15,6 +15,18 @@ def _int(v: str | None, default: int) -> int:
         return default
 
 
+def _threshold(v: str | None, default: float) -> float:
+    if not v:
+        return default
+    try:
+        pct = float(v)
+    except ValueError:
+        return default
+    if not 1 <= pct <= 100:
+        return default
+    return pct / 100
+
+
 @dataclass(frozen=True)
 class Config:
     plex_url: str
@@ -30,6 +42,7 @@ class Config:
     data_dir: str
     dry_run: bool
     timezone: str
+    watched_threshold: float
 
     catchup_on_start: bool
     catchup_interval_hours: int
@@ -58,6 +71,7 @@ class Config:
             data_dir=os.environ.get("DATA_DIR", "/data").strip(),
             dry_run=dry_run,
             timezone=os.environ.get("TZ", "").strip() or "Europe/Belgrade",
+            watched_threshold=_threshold(os.environ.get("WATCHED_THRESHOLD_PERCENT"), default=0.90),
             catchup_on_start=_bool(os.environ.get("CATCHUP_ON_START"), default=True),
             catchup_interval_hours=max(1, _int(os.environ.get("CATCHUP_INTERVAL_HOURS"), 24)),
             catchup_lookback_hours=_int(os.environ.get("CATCHUP_LOOKBACK_HOURS"), 24),

@@ -98,6 +98,7 @@ def main() -> int:
     playing_handler = PlayingHandler(
         on_watched=on_watched,
         username_filter=cfg.plex_username,
+        watched_threshold=cfg.watched_threshold,
     )
 
     listener = PlexListener(
