@@ -11,7 +11,7 @@ A small docker service that watches Plex over websocket and automatically marks 
 3. The show is matched to MyShows by external id (tvdb/imdb) via `shows.GetByExternalId`; the mapping is cached in SQLite.
 4. The episode is marked on MyShows via `manage.CheckEpisode` (v2 JSON-RPC API).
 
-In parallel, a catch-up scan runs on startup and daily: episodes watched while the container was down get marked on the next run via `Plex.history()`.
+In parallel, a catch-up scan runs on startup and daily: episodes watched while the container was down get marked on the next run via `Plex.history()`. It applies the same watched gate as the live listener, so partially-played episodes in history are skipped.
 
 **Existing marks are never touched.** The service only sets "watched"; it cannot unset.
 

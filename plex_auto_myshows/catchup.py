@@ -27,6 +27,7 @@ class CatchUp:
         username_filter: str | None = None,
         tz: str = "Europe/Belgrade",
         dry_run: bool = False,
+        watched_threshold: float = 0.90,
     ):
         self.baseurl = baseurl
         self.token = token
@@ -35,6 +36,7 @@ class CatchUp:
         self.lookback_hours = lookback_hours
         self.username_filter = username_filter
         self.dry_run = dry_run
+        self.watched_threshold = watched_threshold
         try:
             self.tz = ZoneInfo(tz)
         except ZoneInfoNotFoundError:
@@ -101,6 +103,24 @@ class CatchUp:
                 failed += 1
                 continue
             if not isinstance(item, Episode):
+                continue
+            # Plex logs a history entry as soon as playback starts, so an episode
+            # that was merely sampled shows up here. Apply the same watched gate
+            # as the live listener: mark only if Plex counts it watched, or the
+            # resume position is past the threshold.
+            duration = getattr(item, "duration", 0) or 0
+            view_offset = getattr(item, "viewOffset", 0) or 0
+            view_count = getattr(item, "viewCount", 0) or 0
+            progress = (view_offset / duration) if duration else 0.0
+            if not (view_count > 0 or progress >= self.watched_threshold):
+                log.debug(
+                    "Catch-up: skipping %s S%02dE%02d, only %.0f%% watched",
+                    item.grandparentTitle,
+                    item.seasonNumber or 0,
+                    item.index or 0,
+                    progress * 100,
+                )
+                skipped += 1
                 continue
             log.info(
                 "Catch-up: %s S%02dE%02d (%s)",

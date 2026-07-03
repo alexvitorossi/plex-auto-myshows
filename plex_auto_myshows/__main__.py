@@ -85,6 +85,7 @@ def main() -> int:
         username_filter=cfg.plex_username,
         tz=cfg.timezone,
         dry_run=cfg.dry_run,
+        watched_threshold=cfg.watched_threshold,
     )
 
     if cfg.catchup_on_start:
